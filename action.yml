@@ -55,6 +55,7 @@ runs:
         $TO_PORT_ARG
     shell: bash
     env:
+      # Set credentials based on the account-id input
       AWS_ACCESS_KEY_ID: ${{ secrets['AWS_ACCESS_KEY_ID_' + inputs.account-id] }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets['AWS_SECRET_ACCESS_KEY_' + inputs.account-id] }}
       AWS_DEFAULT_REGION: ${{ inputs.aws-region }}
