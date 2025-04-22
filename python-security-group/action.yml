@@ -1,0 +1,44 @@
+name: 'AWS Security Group IP Modifier'
+description: 'Add and remove IP to/from AWS security group'
+inputs:
+  aws-access-key-id:
+    required: true
+    description: 'AWS Access Key ID'
+  aws-secret-access-key:
+    required: true
+    description: 'AWS Secret Access Key'
+  aws-region:
+    required: true
+    description: 'AWS Region'
+  security-group-id:
+    required: true
+    description: 'Security Group ID'
+  port:
+    required: true
+    description: 'Port to allow'
+  protocol:
+    required: false
+    default: 'tcp'
+    description: 'Protocol (default: tcp)'
+  description:
+    required: false
+    default: 'GitHub Action IP'
+    description: 'Rule description'
+  to-port:
+    required: false
+    description: 'To port (optional)'
+
+runs:
+  using: 'composite'
+  steps:
+  - run: |
+      export AWS_ACCESS_KEY_ID="${{ inputs.aws-access-key-id }}"
+      export AWS_SECRET_ACCESS_KEY="${{ inputs.aws-secret-access-key }}"
+      python3 .github/actions/modify_ip.py \
+        --security-group-id ${{ inputs.security-group-id }} \
+        --port ${{ inputs.port }} \
+        --protocol ${{ inputs.protocol }} \
+        --description "${{ inputs.description }}" \
+        --region ${{ inputs.aws-region }} \
+        ${ inputs.to-port && format('--to-port {0}', inputs.to-port) || '' }
+    shell: bash
