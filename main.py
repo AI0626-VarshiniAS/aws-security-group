@@ -4,6 +4,7 @@ import logging
 import requests
 import boto3
 import argparse
+import os
 
 # Function to install packages if they are not already installed
 def install(package):
@@ -25,9 +26,46 @@ def get_public_ip():
         logging.error(f"Error fetching public IP: {e}")
         return None
 
-def add_ip_to_sg(security_group_id, port, protocol, description, region, to_port=None):
+def get_aws_credentials(account_id):
+    """Fetches AWS credentials based on the account ID."""
+    credentials = {
+        '106': {
+            'AWS_ACCESS_KEY_ID': 'AWS_ACCESS_KEY_ID_106',
+            'AWS_SECRET_ACCESS_KEY': 'AWS_SECRET_ACCESS_KEY_106'
+        },
+        '900': {
+            'AWS_ACCESS_KEY_ID': 'AWS_ACCESS_KEY_ID_900',
+            'AWS_SECRET_ACCESS_KEY': 'AWS_SECRET_ACCESS_KEY_900'
+        },
+        '5646': {
+            'AWS_ACCESS_KEY_ID': 'AWS_ACCESS_KEY_ID_5646',
+            'AWS_SECRET_ACCESS_KEY': 'AWS_SECRET_ACCESS_KEY_5646'
+        },
+        '365': {
+            'AWS_ACCESS_KEY_ID': 'AWS_ACCESS_KEY_ID_365',
+            'AWS_SECRET_ACCESS_KEY': 'AWS_SECRET_ACCESS_KEY_365'
+        }
+    }
+
+    # Fetch the credentials for the given account_id
+    account_credentials = credentials.get(account_id)
+    if account_credentials:
+        os.environ['AWS_ACCESS_KEY_ID'] = account_credentials['AWS_ACCESS_KEY_ID']
+        os.environ['AWS_SECRET_ACCESS_KEY'] = account_credentials['AWS_SECRET_ACCESS_KEY']
+        logging.info(f"Using credentials for account {account_id}")
+    else:
+        logging.error(f"No credentials found for account {account_id}")
+        return False
+
+    return True
+
+def add_ip_to_sg(security_group_id, port, protocol, description, region, to_port=None, account_id=None):
     """Adds the public IP to the security group."""
     try:
+        if account_id:
+            if not get_aws_credentials(account_id):
+                return
+
         ec2 = boto3.client('ec2', region_name=region)
 
         public_ip = get_public_ip()
@@ -46,14 +84,18 @@ def add_ip_to_sg(security_group_id, port, protocol, description, region, to_port
             GroupId=security_group_id,
             IpPermissions=[ip_permission]
         )
-        logging.info(f"✅ Added IP {public_ip}/32 to security group {security_group_id}")
+        logging.info(f"✅ Added IP {public_ip} to security group {security_group_id}")
 
     except Exception as e:
         logging.error(f"Error adding IP: {e}")
 
-def remove_ip_from_sg(security_group_id, port, protocol, description, region, to_port=None):
+def remove_ip_from_sg(security_group_id, port, protocol, description, region, to_port=None, account_id=None):
     """Removes the public IP from the security group."""
     try:
+        if account_id:
+            if not get_aws_credentials(account_id):
+                return
+
         ec2 = boto3.client('ec2', region_name=region)
 
         public_ip = get_public_ip()
@@ -72,7 +114,7 @@ def remove_ip_from_sg(security_group_id, port, protocol, description, region, to
             GroupId=security_group_id,
             IpPermissions=[ip_permission]
         )
-        logging.info(f"✅ Removed IP {public_ip}/32 from security group {security_group_id}")
+        logging.info(f"✅ Removed IP {public_ip} from security group {security_group_id}")
 
     except Exception as e:
         logging.error(f"Error removing IP: {e}")
@@ -86,6 +128,7 @@ def parse_args():
     parser.add_argument('--region', required=True, help='AWS region (e.g., us-east-1)')
     parser.add_argument('--to-port', help='Optional: ToPort if different from FromPort')
     parser.add_argument('--action', required=True, choices=['add', 'remove'], help="Action to perform: 'add' or 'remove' IP")
+    parser.add_argument('--account-id', required=True, help='AWS Account ID (e.g., 106, 900, 5646, 365)')
 
     return parser.parse_args()
 
@@ -94,9 +137,9 @@ def main():
     print("Arguments:", args)
 
     if args.action == 'add':
-        add_ip_to_sg(args.security_group_id, args.port, args.protocol, args.description, args.region, args.to_port)
+        add_ip_to_sg(args.security_group_id, args.port, args.protocol, args.description, args.region, args.to_port, args.account_id)
     elif args.action == 'remove':
-        remove_ip_from_sg(args.security_group_id, args.port, args.protocol, args.description, args.region, args.to_port)
+        remove_ip_from_sg(args.security_group_id, args.port, args.protocol, args.description, args.region, args.to_port, args.account_id)
 
 if __name__ == '__main__':
     main()
