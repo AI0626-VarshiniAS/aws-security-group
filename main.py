@@ -4,7 +4,6 @@ import logging
 import requests
 import boto3
 import argparse
-import os
 
 # Function to install packages if they are not already installed
 def install(package):
@@ -26,16 +25,10 @@ def get_public_ip():
         logging.error(f"Error fetching public IP: {e}")
         return None
 
-def add_ip_to_sg(security_group_id, port, protocol, description, region, to_port=None, aws_access_key_id=None, aws_secret_access_key=None):
+def add_ip_to_sg(security_group_id, port, protocol, description, region, to_port=None):
     """Adds the public IP to the security group."""
     try:
-        # Use provided AWS credentials
-        ec2 = boto3.client(
-            'ec2', 
-            region_name=region,
-            aws_access_key_id=aws_access_key_id,
-            aws_secret_access_key=aws_secret_access_key
-        )
+        ec2 = boto3.client('ec2', region_name=region)
 
         public_ip = get_public_ip()
         if not public_ip:
@@ -53,21 +46,15 @@ def add_ip_to_sg(security_group_id, port, protocol, description, region, to_port
             GroupId=security_group_id,
             IpPermissions=[ip_permission]
         )
-        logging.info(f"✅ Added IP {public_ip} to security group {security_group_id}")
+        logging.info(f"✅ Added IP {public_ip}/32 to security group {security_group_id}")
 
     except Exception as e:
         logging.error(f"Error adding IP: {e}")
 
-def remove_ip_from_sg(security_group_id, port, protocol, description, region, to_port=None, aws_access_key_id=None, aws_secret_access_key=None):
+def remove_ip_from_sg(security_group_id, port, protocol, description, region, to_port=None):
     """Removes the public IP from the security group."""
     try:
-        # Use provided AWS credentials
-        ec2 = boto3.client(
-            'ec2', 
-            region_name=region,
-            aws_access_key_id=aws_access_key_id,
-            aws_secret_access_key=aws_secret_access_key
-        )
+        ec2 = boto3.client('ec2', region_name=region)
 
         public_ip = get_public_ip()
         if not public_ip:
@@ -85,14 +72,13 @@ def remove_ip_from_sg(security_group_id, port, protocol, description, region, to
             GroupId=security_group_id,
             IpPermissions=[ip_permission]
         )
-        logging.info(f"✅ Removed IP {public_ip} from security group {security_group_id}")
+        logging.info(f"✅ Removed IP {public_ip}/32 from security group {security_group_id}")
 
     except Exception as e:
         logging.error(f"Error removing IP: {e}")
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Modify security group by adding and removing IP.')
-    parser.add_argument('--account-id', required=True, help='AWS Account ID (to fetch credentials)')
     parser.add_argument('--security-group-id', required=True, help='AWS Security Group ID')
     parser.add_argument('--port', required=True, help='Port to open (e.g., 22)')
     parser.add_argument('--protocol', default='tcp', help='Protocol (default: tcp)')
@@ -107,18 +93,10 @@ def main():
     args = parse_args()
     print("Arguments:", args)
 
-    # Get the AWS credentials from GitHub secrets based on account-id
-    aws_access_key_id = os.getenv(f"AWS_ACCESS_KEY_ID_{args.account_id}")
-    aws_secret_access_key = os.getenv(f"AWS_SECRET_ACCESS_KEY_{args.account_id}")
-
-    if not aws_access_key_id or not aws_secret_access_key:
-        logging.error(f"Error: AWS credentials for account ID {args.account_id} not found.")
-        return
-
     if args.action == 'add':
-        add_ip_to_sg(args.security_group_id, args.port, args.protocol, args.description, args.region, args.to_port, aws_access_key_id, aws_secret_access_key)
+        add_ip_to_sg(args.security_group_id, args.port, args.protocol, args.description, args.region, args.to_port)
     elif args.action == 'remove':
-        remove_ip_from_sg(args.security_group_id, args.port, args.protocol, args.description, args.region, args.to_port, aws_access_key_id, aws_secret_access_key)
+        remove_ip_from_sg(args.security_group_id, args.port, args.protocol, args.description, args.region, args.to_port)
 
 if __name__ == '__main__':
     main()
