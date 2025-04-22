@@ -79,17 +79,17 @@ def remove_ip_from_sg(security_group_id, port, protocol, description, region, to
     except Exception as e:
         logging.error(f"Error removing IP: {e}")
 
-def wait_for_jobs_to_complete(timeout_minutes=30):
-    """Simulates waiting for other jobs to complete with a timeout."""
-    start_time = datetime.now()
-    end_time = start_time + timedelta(minutes=timeout_minutes)
-    while datetime.now() < end_time:
-        time.sleep(10)
-        remaining = end_time - datetime.now()
-        logging.info(f"⌛ Waiting for jobs to complete... Time left: {remaining}")
+# def wait_for_jobs_to_complete(timeout_minutes=30):
+#     """Simulates waiting for other jobs to complete with a timeout."""
+#     start_time = datetime.now()
+#     end_time = start_time + timedelta(minutes=timeout_minutes)
+#     while datetime.now() < end_time:
+#         time.sleep(10)
+#         remaining = end_time - datetime.now()
+#         logging.info(f"⌛ Waiting for jobs to complete... Time left: {remaining}")
     
-    logging.info("🕒 Timeout reached. Proceeding with cleanup.")
-    return True
+#     logging.info("🕒 Timeout reached. Proceeding with cleanup.")
+#     return True
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Modify security group by adding and removing IP.')
@@ -109,7 +109,7 @@ def main():
 
     add_ip_to_sg(args.security_group_id, args.port, args.protocol, args.description, args.region, args.to_port)
     
-    wait_for_jobs_to_complete(timeout_minutes=args.wait_minutes)
+    # wait_for_jobs_to_complete(timeout_minutes=args.wait_minutes)
 
     remove_ip_from_sg(args.security_group_id, args.port, args.protocol, args.description, args.region, args.to_port)
 
