@@ -30,20 +30,20 @@ def get_aws_credentials(account_id):
     """Fetches AWS credentials based on the account ID."""
     credentials = {
         '106': {
-            'AWS_ACCESS_KEY_ID': 'AWS_ACCESS_KEY_ID_106',
-            'AWS_SECRET_ACCESS_KEY': 'AWS_SECRET_ACCESS_KEY_106'
+            'AWS_ACCESS_KEY_ID': 'your_access_key_106',
+            'AWS_SECRET_ACCESS_KEY': 'your_secret_key_106'
         },
         '900': {
-            'AWS_ACCESS_KEY_ID': 'AWS_ACCESS_KEY_ID_900',
-            'AWS_SECRET_ACCESS_KEY': 'AWS_SECRET_ACCESS_KEY_900'
+            'AWS_ACCESS_KEY_ID': 'your_access_key_900',
+            'AWS_SECRET_ACCESS_KEY': 'your_secret_key_900'
         },
         '5646': {
-            'AWS_ACCESS_KEY_ID': 'AWS_ACCESS_KEY_ID_5646',
-            'AWS_SECRET_ACCESS_KEY': 'AWS_SECRET_ACCESS_KEY_5646'
+            'AWS_ACCESS_KEY_ID': 'your_access_key_5646',
+            'AWS_SECRET_ACCESS_KEY': 'your_secret_key_5646'
         },
         '365': {
-            'AWS_ACCESS_KEY_ID': 'AWS_ACCESS_KEY_ID_365',
-            'AWS_SECRET_ACCESS_KEY': 'AWS_SECRET_ACCESS_KEY_365'
+            'AWS_ACCESS_KEY_ID': 'your_access_key_365',
+            'AWS_SECRET_ACCESS_KEY': 'your_secret_key_365'
         }
     }
 
