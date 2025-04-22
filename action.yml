@@ -35,13 +35,7 @@ runs:
   - name: Set up Python
     uses: actions/setup-python@v4
     with:
-      python-version: '3.x'
-
-  - name: Install Python dependencies
-    run: |
-      python3 -m pip install --upgrade pip
-      pip install boto3 requests
-    shell: bash
+      python-version: '3.12'
 
   - name: Run Python script to add/remove IP
     run: |
