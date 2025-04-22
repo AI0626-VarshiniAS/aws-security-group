@@ -50,6 +50,7 @@ runs:
     shell: bash
 
   - name: Set account-specific AWS credentials
+    id: set-aws-credentials
     run: |
       echo "ACCOUNT_ID=${{ inputs.account-id }}" >> $GITHUB_ENV
       echo "AWS_ACCESS_KEY_ID=${{ secrets['AWS_ACCESS_KEY_ID_' + inputs.account-id] }}" >> $GITHUB_ENV
