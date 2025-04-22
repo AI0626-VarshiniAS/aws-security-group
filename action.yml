@@ -37,6 +37,11 @@ runs:
     with:
       python-version: '3.12'
 
+  - name: Install Python dependencies
+    run: |
+      python3 -m pip install --upgrade pip
+      pip install boto3 requests
+    shell: bash
   - name: Run Python script to add/remove IP
     run: |
       export AWS_ACCESS_KEY_ID="${{ inputs.aws-access-key-id }}"
