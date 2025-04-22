@@ -1,4 +1,5 @@
-name: 'AWS Security Group IP Modifier'
+name: AWS Security Group IP Modifier
+
 description: 'Add and remove IP to/from AWS security group'
 
 inputs:
@@ -14,17 +15,6 @@ inputs:
   port:
     required: true
     description: 'Port to allow'
-  protocol:
-    required: false
-    default: 'tcp'
-    description: 'Protocol (default: tcp)'
-  description:
-    required: false
-    default: 'GitHub Action IP'
-    description: 'Rule description'
-  to-port:
-    required: false
-    description: 'To port (optional)'
   action:
     required: true
     description: "Action to perform: 'add' or 'remove' IP"
@@ -36,27 +26,12 @@ runs:
     uses: actions/setup-python@v4
     with:
       python-version: '3.12'
-  - name: Set AWS credentials dynamically
-    run: |
-      echo "AWS_ACCESS_KEY_ID=${{ secrets['AWS_ACCESS_KEY_ID_' + inputs.account-id] }}" >> $GITHUB_ENV
-      echo "AWS_SECRET_ACCESS_KEY=${{ secrets['AWS_SECRET_ACCESS_KEY_' + inputs.account-id] }}" >> $GITHUB_ENV
-      echo "AWS_DEFAULT_REGION=${{ inputs.aws-region }}" >> $GITHUB_ENV
-
-    shell: bash
   - name: Run Python script to add/remove IP
     run: |
-      TO_PORT_ARG=""
-      if [ -n "${{ inputs.to-port }}" ]; then
-        TO_PORT_ARG="--to-port ${{ inputs.to-port }}"
-      fi
-
       python3 "${{ github.action_path }}/main.py" \
         --account-id ${{ inputs.account-id }} \
         --security-group-id ${{ inputs.security-group-id }} \
         --port ${{ inputs.port }} \
-        --protocol ${{ inputs.protocol }} \
         --action ${{ inputs.action }} \
-        --description "${{ inputs.description }}" \
-        --region ${{ inputs.aws-region }} \
-        $TO_PORT_ARG
+        --region ${{ inputs.aws-region }}
     shell: bash
