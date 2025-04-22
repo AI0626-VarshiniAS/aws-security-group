@@ -1,33 +1,33 @@
 name: 'AWS Security Group IP Modifier'
-description: 'Add or remove an IP to/from an AWS security group'
+description: 'Add and remove IP to/from AWS security group'
 
 inputs:
+  aws-access-key-id:
+    required: true
+    description: 'AWS Access Key ID'
+  aws-secret-access-key:
+    required: true
+    description: 'AWS Secret Access Key'
   aws-region:
     required: true
-    description: 'AWS Region (e.g., us-east-1)'
+    description: 'AWS Region'
   security-group-id:
     required: true
-    description: 'AWS Security Group ID'
+    description: 'Security Group ID'
   port:
     required: true
-    description: 'Port to open (e.g., 22)'
+    description: 'Port to allow'
   protocol:
     required: false
     default: 'tcp'
-    description: 'Protocol for the rule (default: tcp)'
+    description: 'Protocol (default: tcp)'
   description:
     required: false
     default: 'GitHub Action IP'
-    description: 'Description for the rule'
+    description: 'Rule description'
   to-port:
     required: false
-    description: 'ToPort if different from FromPort'
-  action:
-    required: true
-    description: 'Action to perform: add or remove IP'
-  account-id:
-    required: true
-    description: 'AWS Account ID to fetch credentials'
+    description: 'To port (optional)'
 
 runs:
   using: 'composite'
@@ -37,32 +37,18 @@ runs:
     with:
       python-version: '3.12'
 
-  - name: Install dependencies
+  - name: Run Python script to add/remove IP
     run: |
-      python -m pip install --upgrade pip
-      pip install boto3 requests
-    shell: bash
-
-  - name: Set account-specific AWS credentials
-    id: set-aws-credentials
-    run: |
-      ACCOUNT_ID="${{ inputs.account-id }}"
-      echo "AWS_ACCESS_KEY_ID=${{ secrets['AWS_ACCESS_KEY_ID_' + ACCOUNT_ID] }}" >> $GITHUB_ENV
-      echo "AWS_SECRET_ACCESS_KEY=${{ secrets['AWS_SECRET_ACCESS_KEY_' + ACCOUNT_ID] }}" >> $GITHUB_ENV
-    shell: bash
-
-  - name: Run Python script to modify security group
-    run: |
-      export AWS_ACCESS_KEY_ID="${{ secrets['AWS_ACCESS_KEY_ID_' + inputs.account-id] }}"
-      export AWS_SECRET_ACCESS_KEY="${{ secrets['AWS_SECRET_ACCESS_KEY_' + inputs.account-id] }}"
+      export AWS_ACCESS_KEY_ID="${{ inputs.aws-access-key-id }}"
+      export AWS_SECRET_ACCESS_KEY="${{ inputs.aws-secret-access-key }}"
 
       TO_PORT_ARG=""
       if [ -n "${{ inputs.to-port }}" ]; then
         TO_PORT_ARG="--to-port ${{ inputs.to-port }}"
       fi
 
-      python3 "${{ github.action_path }}"/main.py \
-        --action ${{ inputs.action }} \
+      python3 "${{ github.action_path }}/main.py" \
+        --account-id ${{ inputs.account-id }} \
         --security-group-id ${{ inputs.security-group-id }} \
         --port ${{ inputs.port }} \
         --protocol ${{ inputs.protocol }} \
