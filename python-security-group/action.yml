@@ -34,7 +34,7 @@ runs:
   - run: |
       export AWS_ACCESS_KEY_ID="${{ inputs.aws-access-key-id }}"
       export AWS_SECRET_ACCESS_KEY="${{ inputs.aws-secret-access-key }}"
-      python3 .github/actions/modify_ip.py \
+      python3 python-security-group/main.py \
         --security-group-id ${{ inputs.security-group-id }} \
         --port ${{ inputs.port }} \
         --protocol ${{ inputs.protocol }} \
