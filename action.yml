@@ -2,6 +2,9 @@ name: 'AWS Security Group IP Modifier'
 description: 'Add and remove IP to/from AWS security group'
 
 inputs:
+  account-id:
+    required: true
+    description: 'AWS Account ID'
   aws-access-key-id:
     required: true
     description: 'AWS Access Key ID'
@@ -28,6 +31,9 @@ inputs:
   to-port:
     required: false
     description: 'To port (optional)'
+  action:
+    required: true
+    description: "Action to perform: 'add' or 'remove' IP"
 
 runs:
   using: 'composite'
@@ -42,11 +48,9 @@ runs:
       python3 -m pip install --upgrade pip
       pip install boto3 requests
     shell: bash
+
   - name: Run Python script to add/remove IP
     run: |
-      export AWS_ACCESS_KEY_ID="${{ inputs.aws-access-key-id }}"
-      export AWS_SECRET_ACCESS_KEY="${{ inputs.aws-secret-access-key }}"
-
       TO_PORT_ARG=""
       if [ -n "${{ inputs.to-port }}" ]; then
         TO_PORT_ARG="--to-port ${{ inputs.to-port }}"
@@ -57,7 +61,12 @@ runs:
         --security-group-id ${{ inputs.security-group-id }} \
         --port ${{ inputs.port }} \
         --protocol ${{ inputs.protocol }} \
+        --action ${{ inputs.action }} \
         --description "${{ inputs.description }}" \
         --region ${{ inputs.aws-region }} \
         $TO_PORT_ARG
+    env:
+      AWS_ACCESS_KEY_ID: ${{ inputs.aws-access-key-id }}
+      AWS_SECRET_ACCESS_KEY: ${{ inputs.aws-secret-access-key }}
+      AWS_DEFAULT_REGION: ${{ inputs.aws-region }}
     shell: bash
