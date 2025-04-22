@@ -47,7 +47,7 @@ runs:
         TO_PORT_ARG="--to-port ${{ inputs.to-port }}"
       fi
 
-      python3 python-security-group/main.py \
+      python3 main.py \
         --security-group-id ${{ inputs.security-group-id }} \
         --port ${{ inputs.port }} \
         --protocol ${{ inputs.protocol }} \
