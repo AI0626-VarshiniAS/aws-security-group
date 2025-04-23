@@ -84,6 +84,7 @@ runs:
 
       # Call your Python script to modify the security group
       python3 "${{ github.action_path }}/main.py" \
+        --account ${{ inputs.account }} \
         --action ${{ inputs.action }} \
         --security-group-id ${{ inputs.security-group-id }} \
         --port ${{ inputs.port }} \
