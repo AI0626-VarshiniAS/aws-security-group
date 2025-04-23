@@ -2,6 +2,12 @@ name: 'AWS Security Group IP Modifier'
 description: 'Add or remove an IP to/from an AWS security group'
 
 inputs:
+  all-sec:
+    required: true
+    description: 'All AWS credentials as secrets (e.g., AWS_ACCESS_KEY_900, AWS_SECRET_ACCESS_KEY_900, etc.)'
+  account:
+    required: true
+    description: 'Account ID to use for AWS keys'
   aws-access-key-id:
     required: true
     description: 'AWS Access Key ID'
@@ -55,11 +61,13 @@ runs:
       if [ -n "${{ inputs.to-port }}" ]; then
         TO_PORT_ARG="--to-port ${{ inputs.to-port }}"
       fi
+
       echo "${{ inputs.all-sec }}" > val.env
       source val.env
 
       account="${{ inputs.account }}"
 
+      # Dynamically choose the correct AWS keys based on account
       access_key_var="AWS_ACCESS_KEY_${account}"
       secret_key_var="AWS_SECRET_ACCESS_KEY_${account}"
 
@@ -74,7 +82,8 @@ runs:
       export AWS_ACCESS_KEY_ID="$access_key_value"
       export AWS_SECRET_ACCESS_KEY="$secret_key_value"
 
-       python3 "${{ github.action_path }}/main.py" \
+      # Call your Python script to modify the security group
+      python3 "${{ github.action_path }}/main.py" \
         --action ${{ inputs.action }} \
         --security-group-id ${{ inputs.security-group-id }} \
         --port ${{ inputs.port }} \
