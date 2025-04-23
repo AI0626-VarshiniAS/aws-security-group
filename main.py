@@ -1,145 +1,91 @@
-import subprocess
-import sys
-import logging
-import requests
-import boto3
-import argparse
 import os
+import logging
+import argparse
+from dotenv import load_dotenv
+import boto3
+import requests
 
-# Function to install packages if they are not already installed
-def install(package):
-    subprocess.check_call([sys.executable, "-m", "pip", "install", package])
-
-# Install required packages
-install('boto3')
-install('requests')
-
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+# Load the .env file
+load_dotenv(dotenv_path=".env")
 
 def get_public_ip():
-    """Fetches the public IP of the machine."""
     try:
         response = requests.get('https://api.ipify.org?format=json')
         return response.json().get('ip')
-    except requests.RequestException as e:
+    except Exception as e:
         logging.error(f"Error fetching public IP: {e}")
         return None
 
-def get_aws_credentials(account_id):
-    """Fetches AWS credentials based on the account ID."""
-    credentials = {
-        '106': {
-            'AWS_ACCESS_KEY_ID': 'your_access_key_106',
-            'AWS_SECRET_ACCESS_KEY': 'your_secret_key_106'
-        },
-        '900': {
-            'AWS_ACCESS_KEY_ID': 'your_access_key_900',
-            'AWS_SECRET_ACCESS_KEY': 'your_secret_key_900'
-        },
-        '5646': {
-            'AWS_ACCESS_KEY_ID': 'your_access_key_5646',
-            'AWS_SECRET_ACCESS_KEY': 'your_secret_key_5646'
-        },
-        '365': {
-            'AWS_ACCESS_KEY_ID': 'your_access_key_365',
-            'AWS_SECRET_ACCESS_KEY': 'your_secret_key_365'
-        }
-    }
+def get_aws_session(account_id, region):
+    access_key = os.getenv(f"AWS_ACCESS_KEY_ID_{account_id}")
+    secret_key = os.getenv(f"AWS_SECRET_ACCESS_KEY_{account_id}")
 
-    # Fetch the credentials for the given account_id
-    account_credentials = credentials.get(account_id)
-    if account_credentials:
-        os.environ['AWS_ACCESS_KEY_ID'] = account_credentials['AWS_ACCESS_KEY_ID']
-        os.environ['AWS_SECRET_ACCESS_KEY'] = account_credentials['AWS_SECRET_ACCESS_KEY']
-        logging.info(f"Using credentials for account {account_id}")
-    else:
-        logging.error(f"No credentials found for account {account_id}")
-        return False
+    if not access_key or not secret_key:
+        raise Exception(f"Missing credentials for account: {account_id}")
 
-    return True
+    session = boto3.Session(
+        aws_access_key_id=access_key,
+        aws_secret_access_key=secret_key,
+        region_name=region
+    )
+    return session
 
-def add_ip_to_sg(security_group_id, port, protocol, description, region, to_port=None, account_id=None):
-    """Adds the public IP to the security group."""
-    try:
-        if account_id:
-            if not get_aws_credentials(account_id):
-                return
+def add_ip(session, sg_id, port, protocol, description):
+    ip = get_public_ip()
+    if not ip:
+        return
 
-        ec2 = boto3.client('ec2', region_name=region)
+    ec2 = session.client("ec2")
+    ec2.authorize_security_group_ingress(
+        GroupId=sg_id,
+        IpPermissions=[
+            {
+                "IpProtocol": protocol,
+                "FromPort": int(port),
+                "ToPort": int(port),
+                "IpRanges": [{"CidrIp": f"{ip}/32", "Description": description}]
+            }
+        ]
+    )
+    logging.info(f"✅ Added {ip} to SG {sg_id}")
 
-        public_ip = get_public_ip()
-        if not public_ip:
-            logging.error("Could not retrieve public IP.")
-            return
+def remove_ip(session, sg_id, port, protocol, description):
+    ip = get_public_ip()
+    if not ip:
+        return
 
-        ip_permission = {
-            'IpProtocol': protocol,
-            'FromPort': int(port),
-            'ToPort': int(to_port) if to_port else int(port),
-            'IpRanges': [{'CidrIp': f'{public_ip}/32', 'Description': description}]
-        }
-
-        ec2.authorize_security_group_ingress(
-            GroupId=security_group_id,
-            IpPermissions=[ip_permission]
-        )
-        logging.info(f"✅ Added IP {public_ip} to security group {security_group_id}")
-
-    except Exception as e:
-        logging.error(f"Error adding IP: {e}")
-
-def remove_ip_from_sg(security_group_id, port, protocol, description, region, to_port=None, account_id=None):
-    """Removes the public IP from the security group."""
-    try:
-        if account_id:
-            if not get_aws_credentials(account_id):
-                return
-
-        ec2 = boto3.client('ec2', region_name=region)
-
-        public_ip = get_public_ip()
-        if not public_ip:
-            logging.error("Could not retrieve public IP.")
-            return
-
-        ip_permission = {
-            'IpProtocol': protocol,
-            'FromPort': int(port),
-            'ToPort': int(to_port) if to_port else int(port),
-            'IpRanges': [{'CidrIp': f'{public_ip}/32', 'Description': description}]
-        }
-
-        ec2.revoke_security_group_ingress(
-            GroupId=security_group_id,
-            IpPermissions=[ip_permission]
-        )
-        logging.info(f"✅ Removed IP {public_ip} from security group {security_group_id}")
-
-    except Exception as e:
-        logging.error(f"Error removing IP: {e}")
-
-def parse_args():
-    parser = argparse.ArgumentParser(description='Modify security group by adding and removing IP.')
-    parser.add_argument('--security-group-id', required=True, help='AWS Security Group ID')
-    parser.add_argument('--port', required=True, help='Port to open (e.g., 22)')
-    parser.add_argument('--protocol', default='tcp', help='Protocol (default: tcp)')
-    parser.add_argument('--description', default='GitHub Action IP', help='Description for rule')
-    parser.add_argument('--region', required=True, help='AWS region (e.g., us-east-1)')
-    parser.add_argument('--to-port', help='Optional: ToPort if different from FromPort')
-    parser.add_argument('--action', required=True, choices=['add', 'remove'], help="Action to perform: 'add' or 'remove' IP")
-    parser.add_argument('--account-id', required=True, help='AWS Account ID (e.g., 106, 900, 5646, 365)')
-
-    return parser.parse_args()
+    ec2 = session.client("ec2")
+    ec2.revoke_security_group_ingress(
+        GroupId=sg_id,
+        IpPermissions=[
+            {
+                "IpProtocol": protocol,
+                "FromPort": int(port),
+                "ToPort": int(port),
+                "IpRanges": [{"CidrIp": f"{ip}/32", "Description": description}]
+            }
+        ]
+    )
+    logging.info(f"✅ Removed {ip} from SG {sg_id}")
 
 def main():
-    args = parse_args()
-    print("Arguments:", args)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--security-group-id", required=True)
+    parser.add_argument("--port", required=True)
+    parser.add_argument("--protocol", default="tcp")
+    parser.add_argument("--description", default="GitHub runner IP")
+    parser.add_argument("--region", required=True)
+    parser.add_argument("--action", choices=["add", "remove"], required=True)
+    parser.add_argument("--account-id", required=True)
+    args = parser.parse_args()
 
-    if args.action == 'add':
-        add_ip_to_sg(args.security_group_id, args.port, args.protocol, args.description, args.region, args.to_port, args.account_id)
-    elif args.action == 'remove':
-        remove_ip_from_sg(args.security_group_id, args.port, args.protocol, args.description, args.region, args.to_port, args.account_id)
+    session = get_aws_session(args.account_id, args.region)
 
-if __name__ == '__main__':
+    if args.action == "add":
+        add_ip(session, args.security_group_id, args.port, args.protocol, args.description)
+    else:
+        remove_ip(session, args.security_group_id, args.port, args.protocol, args.description)
+
+if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     main()

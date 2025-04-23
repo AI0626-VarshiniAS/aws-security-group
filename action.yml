@@ -1,44 +1,49 @@
-name: AWS Security Group IP Modifier
-
-description: 'Add and remove IP to/from AWS security group'
-
+name: "AWS Security Group IP Modifier"
+description: "Add or remove the GitHub Action runner's IP to/from a Security Group using AWS credentials dynamically by account ID"
+author: "Your Name"
 inputs:
   account-id:
+    description: "AWS Account ID to use (mapped to credentials in .env)"
     required: true
-    description: 'AWS Account ID'
   aws-region:
+    description: "AWS Region"
     required: true
-    description: 'AWS Region'
   security-group-id:
+    description: "Security Group ID"
     required: true
-    description: 'Security Group ID'
   port:
+    description: "Port to allow or remove"
     required: true
-    description: 'Port to allow'
+  protocol:
+    description: "Protocol to use (default: tcp)"
+    required: false
+    default: "tcp"
+  to-port:
+    description: "Optional: To port"
+    required: false
   action:
+    description: "Whether to add or remove IP (add/remove)"
     required: true
-    description: "Action to perform: 'add' or 'remove' IP"
+  description:
+    description: "Description for the rule"
+    required: false
+    default: "GitHub runner IP"
 
 runs:
-  using: 'composite'
-  steps:
-  - name: Set up Python
-    uses: actions/setup-python@v4
-    with:
-      python-version: '3.12'
-
-  - name: Install Python dependencies
-    run: |
-      python3 -m pip install --upgrade pip
-      pip install boto3 requests
-    shell: bash
-
-  - name: Run Python script to add/remove IP
-    run: |
-      python3 "${{ github.action_path }}/main.py" \
-        --account-id ${{ inputs.account-id }} \
-        --security-group-id ${{ inputs.security-group-id }} \
-        --port ${{ inputs.port }} \
-        --action ${{ inputs.action }} \
-        --region ${{ inputs.aws-region }}
-    shell: bash
+  using: "docker"
+  image: "Dockerfile"
+  args:
+  - --security-group-id
+  - ${{ inputs.security-group-id }}
+  - --port
+  - ${{ inputs.port }}
+  - --protocol
+  - ${{ inputs.protocol }}
+  - --description
+  - ${{ inputs.description }}
+  - --region
+  - ${{ inputs.aws-region }}
+  - --action
+  - ${{ inputs.action }}
+  - --account-id
+  - ${{ inputs.account-id }}
