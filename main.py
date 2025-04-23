@@ -46,7 +46,7 @@ def add_ip_to_sg(security_group_id, port, protocol, description, region, to_port
             GroupId=security_group_id,
             IpPermissions=[ip_permission]
         )
-        logging.info(f"✅ Added IP {public_ip} to security group {security_group_id}")
+        logging.info(f"✅ Added IP {public_ip}/32 to security group {security_group_id}")
 
     except Exception as e:
         logging.error(f"Error adding IP: {e}")
@@ -72,7 +72,7 @@ def remove_ip_from_sg(security_group_id, port, protocol, description, region, to
             GroupId=security_group_id,
             IpPermissions=[ip_permission]
         )
-        logging.info(f"✅ Removed IP {public_ip} from security group {security_group_id}")
+        logging.info(f"✅ Removed IP {public_ip}/32 from security group {security_group_id}")
 
     except Exception as e:
         logging.error(f"Error removing IP: {e}")
