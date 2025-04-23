@@ -1,36 +1,23 @@
-name: 'AWS Security Group IP Modifier'
-description: 'Add or remove an IP to/from an AWS security group'
+name: AWS Security Group IP Modifier
+
+description: 'Add or remove IP to/from an AWS security group based on the runner IP and account ID'
 
 inputs:
-  aws-access-key-id:
+  account-id:
     required: true
-    description: 'AWS Access Key ID'
-  aws-secret-access-key:
-    required: true
-    description: 'AWS Secret Access Key'
+    description: 'AWS Account ID (used to fetch corresponding credentials from secrets)'
   aws-region:
     required: true
     description: 'AWS Region (e.g., us-east-1)'
   security-group-id:
     required: true
-    description: 'AWS Security Group ID'
+    description: 'AWS Security Group ID to modify'
   port:
     required: true
-    description: 'Port to open (e.g., 22)'
-  protocol:
-    required: false
-    default: 'tcp'
-    description: 'Protocol for the rule (default: tcp)'
-  description:
-    required: false
-    default: 'GitHub Action IP'
-    description: 'Description for the rule'
-  to-port:
-    required: false
-    description: 'ToPort if different from FromPort'
+    description: 'Port to allow or revoke access (e.g., 22)'
   action:
     required: true
-    description: 'Action to perform: add or remove IP'
+    description: "Action to perform: 'add' or 'remove'"
 
 runs:
   using: 'composite'
@@ -40,28 +27,18 @@ runs:
     with:
       python-version: '3.12'
 
-  - name: Install dependencies
+  - name: Install Python dependencies
     run: |
-      python -m pip install --upgrade pip
+      python3 -m pip install --upgrade pip
       pip install boto3 requests
     shell: bash
 
-  - name: Run Python script to modify security group
+  - name: Run Python script to add/remove IP
     run: |
-      export AWS_ACCESS_KEY_ID="${{ inputs.aws-access-key-id }}"
-      export AWS_SECRET_ACCESS_KEY="${{ inputs.aws-secret-access-key }}"
-
-      TO_PORT_ARG=""
-      if [ -n "${{ inputs.to-port }}" ]; then
-        TO_PORT_ARG="--to-port ${{ inputs.to-port }}"
-      fi
-
-      python3 main.py \
-        --action ${{ inputs.action }} \
-        --security-group-id ${{ inputs.security-group-id }} \
-        --port ${{ inputs.port }} \
-        --protocol ${{ inputs.protocol }} \
-        --description "${{ inputs.description }}" \
-        --region ${{ inputs.aws-region }} \
-        $TO_PORT_ARG
+      python3 "${{ github.action_path }}/main.py" \
+        --account-id "${{ inputs.account-id }}" \
+        --security-group-id "${{ inputs.security-group-id }}" \
+        --port "${{ inputs.port }}" \
+        --action "${{ inputs.action }}" \
+        --aws-region "${{ inputs.aws-region }}"
     shell: bash
