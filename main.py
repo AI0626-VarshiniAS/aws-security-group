@@ -1,12 +1,23 @@
-import os
-import boto3
-import argparse
+import subprocess
+import sys
 import logging
 import requests
+import boto3
+import argparse
 
+# Function to install packages if they are not already installed
+def install(package):
+    subprocess.check_call([sys.executable, "-m", "pip", "install", package])
+
+# Install required packages
+install('boto3')
+install('requests')
+
+# Configure logging
 logging.basicConfig(level=logging.INFO)
 
 def get_public_ip():
+    """Fetches the public IP of the machine."""
     try:
         response = requests.get('https://api.ipify.org?format=json')
         return response.json().get('ip')
@@ -14,58 +25,78 @@ def get_public_ip():
         logging.error(f"Error fetching public IP: {e}")
         return None
 
-def set_boto3_session(account_id, region):
-    access_key = os.getenv("AWS_ACCESS_KEY_ID")
-    secret_key = os.getenv("AWS_SECRET_ACCESS_KEY")
-
-    if not access_key or not secret_key:
-        logging.error(f"❌ Missing credentials for account ID: {account_id}")
-        exit(1)
-
-    logging.info(f"🔐 Using credentials for account: {account_id}")
-    return boto3.client('ec2', region_name=region,
-                        aws_access_key_id=access_key,
-                        aws_secret_access_key=secret_key)
-
-def modify_sg(ec2, security_group_id, port, protocol, description, action, to_port=None):
-    public_ip = get_public_ip()
-    if not public_ip:
-        logging.error("❌ Could not retrieve public IP.")
-        return
-
-    ip_permission = {
-        'IpProtocol': protocol,
-        'FromPort': int(port),
-        'ToPort': int(to_port) if to_port else int(port),
-        'IpRanges': [{'CidrIp': f'{public_ip}/32', 'Description': description}]
-    }
-
+def add_ip_to_sg(security_group_id, port, protocol, description, region, to_port=None):
+    """Adds the public IP to the security group."""
     try:
-        if action == 'add':
-            ec2.authorize_security_group_ingress(GroupId=security_group_id, IpPermissions=[ip_permission])
-            logging.info(f"✅ Added IP {public_ip} to security group {security_group_id}")
-        elif action == 'remove':
-            ec2.revoke_security_group_ingress(GroupId=security_group_id, IpPermissions=[ip_permission])
-            logging.info(f"✅ Removed IP {public_ip} from security group {security_group_id}")
+        ec2 = boto3.client('ec2', region_name=region)
+
+        public_ip = get_public_ip()
+        if not public_ip:
+            logging.error("Could not retrieve public IP.")
+            return
+
+        ip_permission = {
+            'IpProtocol': protocol,
+            'FromPort': int(port),
+            'ToPort': int(to_port) if to_port else int(port),
+            'IpRanges': [{'CidrIp': f'{public_ip}/32', 'Description': description}]
+        }
+
+        ec2.authorize_security_group_ingress(
+            GroupId=security_group_id,
+            IpPermissions=[ip_permission]
+        )
+        logging.info(f"✅ Added IP {public_ip} to security group {security_group_id}")
+
     except Exception as e:
-        logging.error(f"❌ Error modifying IP: {e}")
+        logging.error(f"Error adding IP: {e}")
+
+def remove_ip_from_sg(security_group_id, port, protocol, description, region, to_port=None):
+    """Removes the public IP from the security group."""
+    try:
+        ec2 = boto3.client('ec2', region_name=region)
+
+        public_ip = get_public_ip()
+        if not public_ip:
+            logging.error("Could not retrieve public IP.")
+            return
+
+        ip_permission = {
+            'IpProtocol': protocol,
+            'FromPort': int(port),
+            'ToPort': int(to_port) if to_port else int(port),
+            'IpRanges': [{'CidrIp': f'{public_ip}/32', 'Description': description}]
+        }
+
+        ec2.revoke_security_group_ingress(
+            GroupId=security_group_id,
+            IpPermissions=[ip_permission]
+        )
+        logging.info(f"✅ Removed IP {public_ip} from security group {security_group_id}")
+
+    except Exception as e:
+        logging.error(f"Error removing IP: {e}")
 
 def parse_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--account-id', required=True)
-    parser.add_argument('--security-group-id', required=True)
-    parser.add_argument('--port', required=True)
-    parser.add_argument('--action', required=True, choices=['add', 'remove'])
-    parser.add_argument('--aws-region', required=True)
-    parser.add_argument('--protocol', default='tcp')
-    parser.add_argument('--description', default='GitHub runner')
-    parser.add_argument('--to-port')
+    parser = argparse.ArgumentParser(description='Modify security group by adding and removing IP.')
+    parser.add_argument('--security-group-id', required=True, help='AWS Security Group ID')
+    parser.add_argument('--port', required=True, help='Port to open (e.g., 22)')
+    parser.add_argument('--protocol', default='tcp', help='Protocol (default: tcp)')
+    parser.add_argument('--description', default='GitHub Action IP', help='Description for rule')
+    parser.add_argument('--region', required=True, help='AWS region (e.g., us-east-1)')
+    parser.add_argument('--to-port', help='Optional: ToPort if different from FromPort')
+    parser.add_argument('--action', required=True, choices=['add', 'remove'], help="Action to perform: 'add' or 'remove' IP")
+
     return parser.parse_args()
 
 def main():
     args = parse_args()
-    ec2 = set_boto3_session(args.account_id, args.aws_region)
-    modify_sg(ec2, args.security_group_id, args.port, args.protocol, args.description, args.action, args.to_port)
+    print("Arguments:", args)
+
+    if args.action == 'add':
+        add_ip_to_sg(args.security_group_id, args.port, args.protocol, args.description, args.region, args.to_port)
+    elif args.action == 'remove':
+        remove_ip_from_sg(args.security_group_id, args.port, args.protocol, args.description, args.region, args.to_port)
 
 if __name__ == '__main__':
     main()

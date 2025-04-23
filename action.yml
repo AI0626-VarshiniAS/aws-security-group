@@ -36,7 +36,6 @@ runs:
   - name: Run Python script to add/remove IP
     run: |
       python3 "${{ github.action_path }}/main.py" \
-        --account-id "${{ inputs.account-id }}" \
         --security-group-id "${{ inputs.security-group-id }}" \
         --port "${{ inputs.port }}" \
         --action "${{ inputs.action }}" \
