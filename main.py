@@ -64,7 +64,7 @@ def parse_args():
 
 def main():
     args = parse_args()
-    ec2 = set_boto3_session(args.account-id, args.aws_region)
+    ec2 = set_boto3_session(args.account_id, args.aws_region)
     modify_sg(ec2, args.security_group_id, args.port, args.protocol, args.description, args.action, args.to_port)
 
 if __name__ == '__main__':
