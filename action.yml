@@ -46,11 +46,6 @@ runs:
       pip install boto3 requests
     shell: bash
 
-  - name: Dump ALL_SEC into val.env
-    run: |
-      echo "${{ secrets.ALL_SEC }}" > val.env
-    shell: bash
-
   - name: Run Python script to modify security group
     run: |
       export AWS_ACCESS_KEY_ID="${{ inputs.aws-access-key-id }}"
@@ -60,6 +55,24 @@ runs:
       if [ -n "${{ inputs.to-port }}" ]; then
         TO_PORT_ARG="--to-port ${{ inputs.to-port }}"
       fi
+      echo "${{ inputs.all-sec }}" > val.env
+      source val.env
+
+      account="${{ inputs.account }}"
+
+      access_key_var="AWS_ACCESS_KEY_${account}"
+      secret_key_var="AWS_SECRET_ACCESS_KEY_${account}"
+
+      access_key_value=$(eval echo \$$access_key_var)
+      secret_key_value=$(eval echo \$$secret_key_var)
+
+      if [[ -z "$access_key_value" || -z "$secret_key_value" ]]; then
+        echo "❌ Missing keys for account $account"
+        exit 1
+      fi
+
+      export AWS_ACCESS_KEY_ID="$access_key_value"
+      export AWS_SECRET_ACCESS_KEY="$secret_key_value"
 
        python3 "${{ github.action_path }}/main.py" \
         --action ${{ inputs.action }} \
