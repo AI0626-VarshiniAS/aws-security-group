@@ -15,8 +15,8 @@ def get_public_ip():
         return None
 
 def set_boto3_session(account_id, region):
-    access_key = os.getenv(f"AWS_ACCESS_KEY_{account_id}")
-    secret_key = os.getenv(f"AWS_SECRET_ACCESS_KEY_{account_id}")
+    access_key = os.getenv("AWS_ACCESS_KEY_ID")
+    secret_key = os.getenv("AWS_SECRET_ACCESS_KEY")
 
     if not access_key or not secret_key:
         logging.error(f"❌ Missing credentials for account ID: {account_id}")
@@ -64,7 +64,7 @@ def parse_args():
 
 def main():
     args = parse_args()
-    ec2 = set_boto3_session(args.account_id, args.aws_region)
+    ec2 = set_boto3_session(args.account-id, args.aws_region)
     modify_sg(ec2, args.security_group_id, args.port, args.protocol, args.description, args.action, args.to_port)
 
 if __name__ == '__main__':
