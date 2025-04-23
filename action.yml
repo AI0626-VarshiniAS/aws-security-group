@@ -46,6 +46,11 @@ runs:
       pip install boto3 requests
     shell: bash
 
+  - name: Dump ALL_SEC into val.env
+    run: |
+      echo "${{ secrets.ALL_SEC }}" > val.env
+    shell: bash
+
   - name: Run Python script to modify security group
     run: |
       export AWS_ACCESS_KEY_ID="${{ inputs.aws-access-key-id }}"
