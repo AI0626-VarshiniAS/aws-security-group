@@ -56,7 +56,7 @@ runs:
         TO_PORT_ARG="--to-port ${{ inputs.to-port }}"
       fi
 
-      python3 main.py \
+       python3 "${{ github.action_path }}/main.py" \
         --action ${{ inputs.action }} \
         --security-group-id ${{ inputs.security-group-id }} \
         --port ${{ inputs.port }} \
