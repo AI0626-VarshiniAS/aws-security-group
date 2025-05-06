@@ -1,11 +1,11 @@
 import subprocess
 import sys
-import time
 import logging
 import requests
-from datetime import datetime, timedelta
 import boto3
 import argparse
+import os
+from dotenv import load_dotenv
 
 # Function to install packages if they are not already installed
 def install(package):
@@ -14,12 +14,12 @@ def install(package):
 # Install required packages
 install('boto3')
 install('requests')
+install('python-dotenv')
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 
 def get_public_ip():
-    """Fetches the public IP of the machine."""
     try:
         response = requests.get('https://api.ipify.org?format=json')
         return response.json().get('ip')
@@ -27,11 +27,24 @@ def get_public_ip():
         logging.error(f"Error fetching public IP: {e}")
         return None
 
+def load_credentials_from_env(account_id, env_file="val.env"):
+    load_dotenv(env_file)
+    access_key_var = f"AWS_ACCESS_KEY_{account_id}"
+    secret_key_var = f"AWS_SECRET_ACCESS_KEY_{account_id}"
+
+    access_key = os.getenv(access_key_var)
+    secret_key = os.getenv(secret_key_var)
+
+    if not access_key or not secret_key:
+        raise ValueError(f"Missing AWS credentials for account {account_id}")
+
+    os.environ['AWS_ACCESS_KEY_ID'] = access_key
+    os.environ['AWS_SECRET_ACCESS_KEY'] = secret_key
+    logging.info(f"Loaded AWS credentials for account {account_id}")
+
 def add_ip_to_sg(security_group_id, port, protocol, description, region, to_port=None):
-    """Adds the public IP to the security group."""
     try:
         ec2 = boto3.client('ec2', region_name=region)
-
         public_ip = get_public_ip()
         if not public_ip:
             logging.error("Could not retrieve public IP.")
@@ -48,16 +61,14 @@ def add_ip_to_sg(security_group_id, port, protocol, description, region, to_port
             GroupId=security_group_id,
             IpPermissions=[ip_permission]
         )
-        logging.info(f"✅ Added IP {public_ip} to security group {security_group_id}")
+        logging.info(f"Added IP {public_ip} to security group {security_group_id}")
 
     except Exception as e:
         logging.error(f"Error adding IP: {e}")
 
 def remove_ip_from_sg(security_group_id, port, protocol, description, region, to_port=None):
-    """Removes the public IP from the security group."""
     try:
         ec2 = boto3.client('ec2', region_name=region)
-
         public_ip = get_public_ip()
         if not public_ip:
             logging.error("Could not retrieve public IP.")
@@ -74,44 +85,32 @@ def remove_ip_from_sg(security_group_id, port, protocol, description, region, to
             GroupId=security_group_id,
             IpPermissions=[ip_permission]
         )
-        logging.info(f"✅ Removed IP {public_ip} from security group {security_group_id}")
+        logging.info(f"Removed IP {public_ip} from security group {security_group_id}")
 
     except Exception as e:
         logging.error(f"Error removing IP: {e}")
 
-def wait_for_jobs_to_complete(timeout_minutes=30):
-    """Simulates waiting for other jobs to complete with a timeout."""
-    start_time = datetime.now()
-    end_time = start_time + timedelta(minutes=timeout_minutes)
-    while datetime.now() < end_time:
-        time.sleep(10)
-        remaining = end_time - datetime.now()
-        logging.info(f"⌛ Waiting for jobs to complete... Time left: {remaining}")
-    
-    logging.info("🕒 Timeout reached. Proceeding with cleanup.")
-    return True
-
 def parse_args():
-    parser = argparse.ArgumentParser(description='Modify security group by adding and removing IP.')
-    parser.add_argument('--security-group-id', required=True, help='AWS Security Group ID')
-    parser.add_argument('--port', required=True, help='Port to open (e.g., 22)')
+    parser = argparse.ArgumentParser(description='Modify AWS Security Group IP rules.')
+    parser.add_argument('--account', required=True, help='Account ID for credentials')
+    parser.add_argument('--security-group-id', required=True, help='Security Group ID')
+    parser.add_argument('--port', required=True, help='Port to open/close')
     parser.add_argument('--protocol', default='tcp', help='Protocol (default: tcp)')
-    parser.add_argument('--description', default='GitHub Action IP', help='Description for rule')
-    parser.add_argument('--region', required=True, help='AWS region (e.g., us-east-1)')
-    parser.add_argument('--to-port', help='Optional: ToPort if different from FromPort')
-    parser.add_argument('--wait-minutes', type=int, default=30, help='How long to wait before removing IP')
+    parser.add_argument('--description', default='GitHub Action IP', help='Description')
+    parser.add_argument('--region', required=True, help='AWS region')
+    parser.add_argument('--to-port', help='Optional to_port')
+    parser.add_argument('--action', required=True, choices=['add', 'remove'], help='Action to perform')
 
     return parser.parse_args()
 
 def main():
     args = parse_args()
-    print("printing arguments",args)
+    load_credentials_from_env(args.account)
 
-    add_ip_to_sg(args.security_group_id, args.port, args.protocol, args.description, args.region, args.to_port)
-    
-    wait_for_jobs_to_complete(timeout_minutes=args.wait_minutes)
-
-    remove_ip_from_sg(args.security_group_id, args.port, args.protocol, args.description, args.region, args.to_port)
+    if args.action == 'add':
+        add_ip_to_sg(args.security_group_id, args.port, args.protocol, args.description, args.region, args.to_port)
+    elif args.action == 'remove':
+        remove_ip_from_sg(args.security_group_id, args.port, args.protocol, args.description, args.region, args.to_port)
 
 if __name__ == '__main__':
     main()
