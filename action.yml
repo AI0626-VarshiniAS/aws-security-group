@@ -22,7 +22,7 @@ inputs:
     description: 'AWS Security Group ID'
   port:
     required: true
-    default: 22
+    default: '22'
     description: 'Port to open (e.g., 22)'
   protocol:
     required: false
@@ -34,6 +34,7 @@ inputs:
     description: 'Description for the rule'
   to-port:
     required: false
+    default: '22'
     description: 'ToPort if different from FromPort'
   action:
     required: true
@@ -76,7 +77,7 @@ runs:
       secret_key_value=$(eval echo \$$secret_key_var)
 
       if [[ -z "$access_key_value" || -z "$secret_key_value" ]]; then
-        echo "❌ Missing keys for account $account"
+        echo " Missing keys for account $account"
         exit 1
       fi
 
