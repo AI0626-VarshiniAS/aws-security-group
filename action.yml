@@ -22,6 +22,7 @@ inputs:
     description: 'AWS Security Group ID'
   port:
     required: true
+    default: 22
     description: 'Port to open (e.g., 22)'
   protocol:
     required: false
