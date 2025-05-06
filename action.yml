@@ -9,10 +9,10 @@ inputs:
     required: true
     description: 'Account ID to use for AWS keys'
   aws-access-key-id:
-    required: true
+    required: false
     description: 'AWS Access Key ID'
   aws-secret-access-key:
-    required: true
+    required: false
     description: 'AWS Secret Access Key'
   aws-region:
     required: true
